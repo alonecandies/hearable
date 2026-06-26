@@ -10,10 +10,10 @@ class Hearable < Formula
   license "MIT"
   head "https://github.com/alonecandies/hearable.git", branch: "master"
 
-  # stable do
-  #   url "https://github.com/alonecandies/hearable/archive/refs/tags/v0.1.0.tar.gz"
-  #   sha256 "FILL_AFTER_PUSHING_THE_TAG"   # sha256 of the v0.1.0 source tarball
-  # end
+  stable do
+    url "https://github.com/alonecandies/hearable/archive/refs/tags/v0.1.0.tar.gz"
+    sha256 "9ee2df320e5550e94ea28dea665fd858d6f1aa2bcdbf56d1486783d3a7645885"
+  end
 
   depends_on "rust" => :build
 
