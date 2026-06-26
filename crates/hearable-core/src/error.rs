@@ -5,6 +5,8 @@ pub enum Error {
     Audio(String),
     #[error("asr error: {0}")]
     Asr(String),
+    #[error("speaker error: {0}")]
+    Speaker(String),
     #[error("store error: {0}")]
     Store(String),
     #[error("config error: {0}")]

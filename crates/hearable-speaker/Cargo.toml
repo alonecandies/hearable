@@ -5,8 +5,14 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 
+[features]
+default = []
+# ERes2NetV2 (and other) speaker-embedding models via the official sherpa-onnx crate.
+sherpa = ["dep:sherpa-onnx"]
+
 [dependencies]
 hearable-core.workspace = true
+sherpa-onnx = { workspace = true, optional = true }
 
 [dev-dependencies]
 proptest.workspace = true

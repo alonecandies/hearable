@@ -6,3 +6,8 @@
 pub mod identify;
 
 pub use identify::{ClusterConfig, LeaderClusterIdentifier};
+
+#[cfg(feature = "sherpa")]
+pub mod sherpa_embed;
+#[cfg(feature = "sherpa")]
+pub use sherpa_embed::SherpaEmbeddingExtractor;

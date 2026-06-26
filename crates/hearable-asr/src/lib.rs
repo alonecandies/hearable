@@ -6,3 +6,8 @@
 pub mod mock;
 
 pub use mock::MockAsrEngine;
+
+#[cfg(feature = "sherpa")]
+pub mod sense_voice;
+#[cfg(feature = "sherpa")]
+pub use sense_voice::{SenseVoiceEngine, SenseVoicePaths};

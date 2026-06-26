@@ -11,3 +11,8 @@ pub mod wav_source;
 pub use resample::Resampler16k;
 pub use segmenter::{EnergySegmenter, SegConfig};
 pub use wav_source::WavAudioSource;
+
+#[cfg(feature = "sherpa")]
+pub mod silero_vad;
+#[cfg(feature = "sherpa")]
+pub use silero_vad::{SileroVad, SileroVadConfig};

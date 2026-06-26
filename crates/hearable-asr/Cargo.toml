@@ -5,5 +5,12 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 
+[features]
+default = []
+# Real on-device ASR via the official sherpa-onnx crate. Its build.rs downloads prebuilt
+# native libs from GitHub releases, so this is off by default and excluded from CI.
+sherpa = ["dep:sherpa-onnx"]
+
 [dependencies]
 hearable-core.workspace = true
+sherpa-onnx = { workspace = true, optional = true }

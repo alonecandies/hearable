@@ -13,6 +13,13 @@ path = "src/lib.rs"
 name = "hearable"
 path = "src/main.rs"
 
+[features]
+default = []
+# Enable the real on-device ML engines (downloads native libs at build time).
+sherpa = ["hearable-asr/sherpa", "hearable-audio/sherpa", "hearable-speaker/sherpa"]
+# Enable real microphone capture.
+mic = ["hearable-audio/mic"]
+
 [dependencies]
 hearable-core.workspace = true
 hearable-audio.workspace = true

@@ -18,6 +18,8 @@ toml = "0.8"
 rusqlite = { version = "0.40", features = ["bundled", "blob"] }
 hound = "3.5"
 clap = { version = "4", features = ["derive"] }
+# on-device ML (behind the `sherpa` feature; build.rs downloads prebuilt native libs)
+sherpa-onnx = "1.13"
 # realtime audio + pipeline
 crossbeam-channel = "0.5"
 rtrb = "0.3"

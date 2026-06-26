@@ -9,6 +9,8 @@ license.workspace = true
 default = []
 # Real microphone capture via cpal (CoreAudio / ALSA / PulseAudio). Off in CI.
 mic = ["dep:cpal"]
+# Silero VAD via the official sherpa-onnx crate. Off by default (downloads native libs).
+sherpa = ["dep:sherpa-onnx"]
 
 [dependencies]
 hearable-core.workspace = true
@@ -18,6 +20,7 @@ rtrb.workspace = true
 audioadapter.workspace = true
 audioadapter-buffers.workspace = true
 cpal = { workspace = true, optional = true }
+sherpa-onnx = { workspace = true, optional = true }
 
 [dev-dependencies]
 tempfile.workspace = true
