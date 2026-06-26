@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(
@@ -13,6 +14,13 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Command {
-    /// Print the resolved settings (Phase 0 stand-in for the overlay run loop).
+    /// Print the resolved settings.
     Config,
+    /// Start live captioning: microphone -> VAD -> ASR -> speaker ID -> overlay.
+    /// Requires a build with `--features live` (sherpa + mic + ui).
+    Run {
+        /// Directory containing the model files (SenseVoice, Silero VAD, ERes2NetV2, tokens).
+        #[arg(long)]
+        models: PathBuf,
+    },
 }

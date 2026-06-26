@@ -19,6 +19,10 @@ default = []
 sherpa = ["hearable-asr/sherpa", "hearable-audio/sherpa", "hearable-speaker/sherpa"]
 # Enable real microphone capture.
 mic = ["hearable-audio/mic"]
+# Enable the egui caption overlay.
+ui = ["hearable-ui/ui"]
+# Everything needed for the live `hearable run` command.
+live = ["sherpa", "mic", "ui"]
 
 [dependencies]
 hearable-core.workspace = true
@@ -26,7 +30,9 @@ hearable-audio.workspace = true
 hearable-asr.workspace = true
 hearable-speaker.workspace = true
 hearable-store.workspace = true
+hearable-ui.workspace = true
 clap.workspace = true
+directories.workspace = true
 
 [dev-dependencies]
 hound.workspace = true
