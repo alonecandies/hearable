@@ -71,12 +71,22 @@ cargo run -p hearable -- config
 ### Running the live build (developer preview)
 
 ```bash
-# Downloads sherpa-onnx native libs at build time; needs a mic + display.
-cargo build --release --features live
-# Provide a directory with the model files (SenseVoice model.int8.onnx + tokens.txt,
-# silero_vad.onnx, 3dspeaker_speech_eres2netv2_sv_zh-cn_16k-common.onnx):
-./target/release/hearable run --models /path/to/models
+./scripts/fetch-models.sh ./models          # download the on-device models (~300 MB)
 ```
+
+**macOS (recommended — proper mic permission):**
+```bash
+./scripts/bundle-macos.sh                    # builds + assembles a signed target/hearable.app
+open target/hearable.app --args run --models ./models
+```
+
+**Any platform (bare binary):**
+```bash
+cargo build --release --features live        # downloads sherpa-onnx native libs at build time
+./target/release/hearable run --models ./models
+```
+On macOS the bare binary makes *Terminal* request the mic; the `.app` bundle requests it as
+"hearable" instead. Needs a microphone and a display.
 - [ ] **Phase 2** — Language-ID routing + opt-in word-by-word streaming mode.
 - [ ] **Phase 3** — Wayland (layer-shell) overlay + Homebrew/apt/AppImage packaging.
 - [ ] **Phase 4** — Optional cloud hybrid mode (identity stays local).

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>hearable</string>
+    <key>CFBundleDisplayName</key>
+    <string>hearable</string>
+    <key>CFBundleIdentifier</key>
+    <string>app.krystal.hearable</string>
+    <key>CFBundleExecutable</key>
+    <string>hearable</string>
+    <key>CFBundleVersion</key>
+    <string>0.0.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.0.0</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>11.0</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <!-- Required for the microphone TCC prompt to attribute to hearable (not the terminal). -->
+    <key>NSMicrophoneUsageDescription</key>
+    <string>hearable listens to your microphone to caption speech and recognize speakers entirely on-device.</string>
+</dict>
+</plist>

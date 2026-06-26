@@ -13,6 +13,22 @@ path = "src/lib.rs"
 name = "hearable"
 path = "src/main.rs"
 
+# `cargo deb` metadata. Build the live binary first:
+#   cargo build --release --features live && cargo deb --no-build
+[package.metadata.deb]
+maintainer = "Long Hoang <long.hoang@krystal.app>"
+copyright = "2026, Long Hoang"
+license-file = ["../../LICENSE", "0"]
+section = "sound"
+priority = "optional"
+extended-description = "Real-time on-device captioning and speaker identification overlay for Deaf and hard-of-hearing users."
+# Runtime libraries for cpal (ALSA) and the egui/winit overlay (X11 + Wayland).
+depends = "libc6, libasound2, libxkbcommon0, libwayland-client0, libxcb1, libgl1"
+assets = [
+    ["../../target/release/hearable", "usr/bin/", "755"],
+    ["../../README.md", "usr/share/doc/hearable/README.md", "644"],
+]
+
 [features]
 default = []
 # Enable the real on-device ML engines (downloads native libs at build time).
