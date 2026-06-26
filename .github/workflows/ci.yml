@@ -16,3 +16,18 @@ jobs:
       # cpal needs libasound2-dev, eframe needs X11/Wayland dev libs) and are verified locally.
       - run: cargo clippy -p hearable-store --features download --all-targets -- -D warnings
       - run: cargo test -p hearable-store --features download
+
+  # Compile-check the native audio (cpal) + overlay (egui) paths on Linux with their system
+  # dev libs. Skips `sherpa` (it downloads large prebuilt libs at build time).
+  linux-features:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.85
+      - name: Install audio + windowing dev libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev libxkbcommon-dev libwayland-dev \
+            libxcb1-dev libgl1-mesa-dev
+      - run: cargo check -p hearable-audio --features mic
+      - run: cargo check -p hearable-ui --features ui
