@@ -29,11 +29,20 @@
 
 **Also done since:**
 - [x] **Task 1.1 `MicAudioSource`** (cpal, `mic`) — realtime callback → rtrb → resample; compile-verified.
+- [x] **Task 1.2 language-ID pass** (`sherpa`) — `LanguageId` (Whisper SLID); SenseVoice fills `lang`; compile+link-verified.
 - [x] **Task 1.4 caption overlay** (`hearable-ui`, `ui`) — testable `CaptionView` + egui rendering; compile-verified.
 - [x] **Task 1.5 model downloader** (`hearable-store`, `download`) — resumable + SHA-256; tested vs a local server.
-- [x] **Task 1.6 `hearable run` wiring** (`live`) — full chain compile+link-verified end-to-end (onboarding + click-to-name still pending below).
+- [x] **Task 1.6 `hearable run` wiring** (`live`) — full chain compile+link-verified end-to-end.
+- [x] **Interactive click-to-name** — shared `Arc<Mutex<Identifier>>`, `UiCommand` channel, promote + persist to SQLite; compile+link-verified.
+- [x] **First-run settings persistence** — `Settings::save_to` + first-run write (tested).
 
-**Remaining tasks (each leaves the default suite green):**
+**Genuinely remaining (larger or hardware/asset-dependent):**
+- **Streaming word-by-word mode** — needs a streaming-aware *pipeline path* (feed sub-utterance chunks, emit interim `CaptionEvent`s), not just a streaming model behind the utterance trait. Real feature; own design.
+- **Auto-download onboarding** — the downloader exists; needs a model registry with **pinned SHA-256s** (compute by downloading the real release assets once) + an interactive retention prompt.
+- **Run-on-hardware validation** — the live path is compile+link-verified but unrun (needs mic + display + models on a real machine).
+- Wayland layer-shell overlay + packaging are **Phase 3**.
+
+**Original task list (for reference):**
 
 ### Task 1.1: `MicAudioSource` (cpal, behind `mic`) — DONE
 - Create `crates/hearable-audio/src/mic_source.rs`: implement `AudioSource` over `cpal`. Pick the default input device + config; in the realtime callback, push raw samples to an `rtrb` ring buffer (no alloc/lock/log); a drain method downmixes to mono and feeds `Resampler16k`, calling `on_frame` with 16 kHz frames. Register an error callback that sets an atomic "rebuild" flag for device-change/XRUN.
