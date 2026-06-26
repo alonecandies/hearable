@@ -28,8 +28,9 @@ audioadapter = "3"          # pinned to match rubato 3.0's ^3 requirement
 audioadapter-buffers = "3"
 cpal = "0.18"                              # behind the `mic` feature
 directories = "6"
-# model downloader (behind the `download` feature)
-reqwest = { version = "0.13", default-features = false, features = ["stream", "rustls-tls"] }
+# model downloader (behind the `download` feature). Default TLS = SecureTransport on macOS;
+# Phase 3 packaging may switch to rustls to drop the OpenSSL dependency on Linux.
+reqwest = { version = "0.13", features = ["blocking", "stream"] }
 sha2 = "0.11"
 futures-util = "0.3"
 tokio = { version = "1", features = ["rt", "macros", "io-util"] }

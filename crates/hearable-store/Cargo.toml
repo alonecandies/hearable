@@ -5,6 +5,13 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 
+[features]
+default = []
+# First-run model downloader (resumable HTTP + SHA-256 verification).
+download = ["dep:reqwest", "dep:sha2"]
+
 [dependencies]
 hearable-core.workspace = true
 rusqlite.workspace = true
+reqwest = { workspace = true, optional = true }
+sha2 = { workspace = true, optional = true }
