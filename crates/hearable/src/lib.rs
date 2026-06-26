@@ -2,6 +2,8 @@
 //! components together. The binary (`main.rs`) is a thin shell over this library, and the
 //! integration tests link against it.
 
+pub mod coordinator;
 pub mod pipeline;
 
+pub use coordinator::{run_threaded, PipelineOutcome};
 pub use pipeline::run_pipeline;

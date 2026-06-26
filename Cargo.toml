@@ -18,6 +18,20 @@ toml = "0.8"
 rusqlite = { version = "0.40", features = ["bundled", "blob"] }
 hound = "3.5"
 clap = { version = "4", features = ["derive"] }
+# realtime audio + pipeline
+crossbeam-channel = "0.5"
+rtrb = "0.3"
+rubato = "3"
+cpal = "0.18"                              # behind the `mic` feature
+directories = "6"
+# model downloader (behind the `download` feature)
+reqwest = { version = "0.13", default-features = false, features = ["stream", "rustls-tls"] }
+sha2 = "0.11"
+futures-util = "0.3"
+tokio = { version = "1", features = ["rt", "macros", "io-util"] }
+# overlay UI (behind the `ui` feature)
+eframe = "0.32"
+egui = "0.32"
 # dev
 insta = { version = "1.48", features = ["yaml", "redactions"] }
 proptest = "1.11"
