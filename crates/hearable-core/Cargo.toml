@@ -1,0 +1,16 @@
+[package]
+name = "hearable-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+thiserror.workspace = true
+serde.workspace = true
+figment.workspace = true
+toml.workspace = true
+
+[dev-dependencies]
+# Enables `figment::Jail` for hermetic env-override tests (additive over workspace features).
+figment = { workspace = true, features = ["test"] }

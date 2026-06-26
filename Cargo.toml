@@ -1,0 +1,31 @@
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.0.0"
+edition = "2021"
+rust-version = "1.85"
+license = "MIT"
+authors = ["Long Hoang <long.hoang@krystal.app>"]
+repository = "https://github.com/alonecandies/hearable"
+
+[workspace.dependencies]
+thiserror = "2"
+serde = { version = "1", features = ["derive"] }
+figment = { version = "0.10", features = ["toml", "env"] }
+toml = "0.8"
+rusqlite = { version = "0.40", features = ["bundled", "blob"] }
+hound = "3.5"
+clap = { version = "4", features = ["derive"] }
+# dev
+insta = { version = "1.48", features = ["yaml", "redactions"] }
+proptest = "1.11"
+rstest = "0.23"
+tempfile = "3"
+# intra-workspace
+hearable-core = { path = "crates/hearable-core" }
+hearable-speaker = { path = "crates/hearable-speaker" }
+hearable-store = { path = "crates/hearable-store" }
+hearable-asr = { path = "crates/hearable-asr" }
+hearable-audio = { path = "crates/hearable-audio" }
