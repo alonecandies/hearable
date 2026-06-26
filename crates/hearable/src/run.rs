@@ -152,8 +152,9 @@ pub fn run(models: &Path, engine: &str, language: Option<String>) -> Result<()> 
         }
     });
 
-    // Overlay on the main thread; blocks until the window is closed.
-    let overlay_result = run_overlay(caption_rx, cmd_tx, 3);
+    // Overlay on the main thread; blocks until the window is closed. Keep 500 lines of
+    // scrollable history.
+    let overlay_result = run_overlay(caption_rx, cmd_tx, 500);
 
     // Window closed -> stop capture; dropping cmd_tx ends the handler.
     stop.store(true, Ordering::Relaxed);

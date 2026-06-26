@@ -99,18 +99,14 @@ impl CaptionView {
         }
     }
 
-    /// Visible lines (committed, plus any partial tail), oldest first, capped to `max_lines`.
+    /// All kept lines (committed history, capped at `max_lines`, plus any partial tail),
+    /// oldest first. The overlay shows these in a scroll area.
     pub fn visible(&self) -> Vec<DisplayLine> {
         let mut v: Vec<DisplayLine> = self.committed.iter().cloned().collect();
         if let Some(p) = &self.partial {
             v.push(p.clone());
         }
-        let n = v.len();
-        if n > self.max_lines {
-            v.split_off(n - self.max_lines)
-        } else {
-            v
-        }
+        v
     }
 }
 
