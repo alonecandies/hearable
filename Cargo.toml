@@ -48,3 +48,4 @@ hearable-speaker = { path = "crates/hearable-speaker" }
 hearable-store = { path = "crates/hearable-store" }
 hearable-asr = { path = "crates/hearable-asr" }
 hearable-audio = { path = "crates/hearable-audio" }
+hearable-ui = { path = "crates/hearable-ui" }

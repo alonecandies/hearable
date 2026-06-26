@@ -1,0 +1,17 @@
+[package]
+name = "hearable-ui"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[features]
+default = []
+# The egui/eframe caption overlay. Off in CI (needs a display); the view-model is testable
+# without it.
+ui = ["dep:eframe", "dep:egui"]
+
+[dependencies]
+hearable-core.workspace = true
+eframe = { workspace = true, optional = true }
+egui = { workspace = true, optional = true }
