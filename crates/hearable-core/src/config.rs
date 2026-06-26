@@ -2,6 +2,7 @@ use crate::{Embedding, Result};
 use figment::providers::{Env, Format, Serialized, Toml};
 use figment::Figment;
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 
 /// How much of what is heard is kept. Defaults to the privacy-first option.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -50,6 +51,17 @@ impl Settings {
             .extract()
             .map_err(|e| crate::Error::Config(e.to_string()))
     }
+
+    /// Persist settings as TOML (creating parent directories). Used to record the user's
+    /// first-run retention choice.
+    pub fn save_to(&self, path: &Path) -> Result<()> {
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let toml = toml::to_string_pretty(self).map_err(|e| crate::Error::Config(e.to_string()))?;
+        std::fs::write(path, toml)?;
+        Ok(())
+    }
 }
 
 /// A persisted named speaker. Stores embeddings (voice fingerprints) only.
@@ -69,6 +81,25 @@ mod tests {
         assert!(matches!(s.retention, Retention::Ephemeral));
         assert!(matches!(s.language_mode, LanguageMode::Auto));
         assert!(!s.streaming);
+    }
+
+    #[test]
+    fn save_to_then_reload_roundtrips() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("nested").join("config.toml");
+        let s = Settings {
+            retention: Retention::Persistent,
+            language_mode: LanguageMode::Auto,
+            streaming: true,
+        };
+        s.save_to(&path).unwrap();
+
+        let loaded: Settings = Figment::from(Serialized::defaults(Settings::default()))
+            .merge(Toml::file(&path))
+            .extract()
+            .unwrap();
+        assert!(loaded.streaming);
+        assert!(matches!(loaded.retention, Retention::Persistent));
     }
 
     #[test]

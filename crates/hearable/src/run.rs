@@ -17,7 +17,16 @@ use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 
 pub fn run(models: &Path) -> Result<()> {
-    let _settings = Settings::load()?;
+    let settings = Settings::load()?;
+
+    // First run: persist settings (privacy-first defaults) so the choice sticks. An
+    // interactive retention prompt is a planned onboarding refinement.
+    if let Some(dirs) = directories::ProjectDirs::from("app", "krystal", "hearable") {
+        let cfg_path = dirs.config_dir().join("config.toml");
+        if !cfg_path.exists() {
+            let _ = settings.save_to(&cfg_path);
+        }
+    }
 
     let sense_model = models.join("model.int8.onnx");
     let tokens = models.join("tokens.txt");

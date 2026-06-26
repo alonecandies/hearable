@@ -14,3 +14,4 @@ toml.workspace = true
 [dev-dependencies]
 # Enables `figment::Jail` for hermetic env-override tests (additive over workspace features).
 figment = { workspace = true, features = ["test"] }
+tempfile.workspace = true
