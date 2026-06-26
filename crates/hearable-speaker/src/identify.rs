@@ -15,10 +15,13 @@ pub struct ClusterConfig {
 
 impl Default for ClusterConfig {
     fn default() -> Self {
+        // Tuned from a first real run: 0.70 was far too strict — short, real-world
+        // utterances never cleared it, so the same speaker spawned a new cluster each turn.
+        // 0.5 matches sherpa's own example threshold; short utterances relax further.
         Self {
-            threshold: 0.70,
-            short_threshold: 0.62,
-            short_secs: 1.5,
+            threshold: 0.50,
+            short_threshold: 0.40,
+            short_secs: 2.0,
             ema_alpha: 0.05,
         }
     }
@@ -58,16 +61,6 @@ impl LeaderClusterIdentifier {
             }
         }
         me
-    }
-
-    /// Identify with awareness of the utterance length, which selects the threshold.
-    pub fn identify_with_duration(&mut self, e: &Embedding, duration_secs: f32) -> SpeakerLabel {
-        let thr = if duration_secs < self.cfg.short_secs {
-            self.cfg.short_threshold
-        } else {
-            self.cfg.threshold
-        };
-        self.identify_at(e, thr)
     }
 
     fn alloc_id(&mut self) -> ClusterId {
@@ -129,6 +122,15 @@ impl LeaderClusterIdentifier {
 impl Identifier for LeaderClusterIdentifier {
     fn identify(&mut self, e: &Embedding) -> SpeakerLabel {
         let thr = self.cfg.threshold;
+        self.identify_at(e, thr)
+    }
+
+    fn identify_with_duration(&mut self, e: &Embedding, duration_secs: f32) -> SpeakerLabel {
+        let thr = if duration_secs < self.cfg.short_secs {
+            self.cfg.short_threshold
+        } else {
+            self.cfg.threshold
+        };
         self.identify_at(e, thr)
     }
 
@@ -255,17 +257,24 @@ mod tests {
 
     #[test]
     fn short_utterance_uses_relaxed_threshold() {
+        // Explicit config so this stays meaningful regardless of the shipped defaults.
         // Cosine(a, b) ≈ 0.66 lands between short_threshold (0.62) and threshold (0.70):
         // a long utterance starts a new cluster, a short one joins the existing one.
+        let cfg = ClusterConfig {
+            threshold: 0.70,
+            short_threshold: 0.62,
+            short_secs: 1.5,
+            ema_alpha: 0.05,
+        };
         let a = Embedding(vec![1.0, 0.0]);
         let b = Embedding(vec![0.66, 0.75]);
 
-        let mut long_id = id_default();
+        let mut long_id = LeaderClusterIdentifier::new(cfg.clone(), vec![]);
         long_id.identify_with_duration(&a, 3.0);
         let long_label = long_id.identify_with_duration(&b, 3.0);
         assert_eq!(cluster_of(&long_label).0, 1, "long utterance: new cluster");
 
-        let mut short_id = id_default();
+        let mut short_id = LeaderClusterIdentifier::new(cfg, vec![]);
         short_id.identify_with_duration(&a, 0.5);
         let short_label = short_id.identify_with_duration(&b, 0.5);
         assert_eq!(

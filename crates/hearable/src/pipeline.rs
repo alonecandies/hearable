@@ -29,7 +29,7 @@ where
     for utt in utts {
         let tr = asr.transcribe(&utt)?;
         let emb = embedder.embed(&utt)?;
-        let speaker = identifier.identify(&emb);
+        let speaker = identifier.identify_with_duration(&emb, utt.duration_secs());
         sink.emit(CaptionEvent {
             utt_id: utt.id,
             text: tr.text,

@@ -20,11 +20,13 @@ pub struct SileroVadConfig {
 
 impl SileroVadConfig {
     pub fn with_model(model: impl Into<String>) -> Self {
+        // Sensitivity tuned from a first real run ("sometimes doesn't hear me"): a lower
+        // threshold and shorter min-speech catch quieter / briefer utterances.
         Self {
             model: model.into(),
-            threshold: 0.5,
+            threshold: 0.35,
             min_silence_secs: 0.25,
-            min_speech_secs: 0.20,
+            min_speech_secs: 0.12,
             max_speech_secs: 12.0,
         }
     }

@@ -35,6 +35,11 @@ pub trait EmbeddingExtractor: Send {
 /// promoting a cluster to a named profile.
 pub trait Identifier {
     fn identify(&mut self, e: &Embedding) -> SpeakerLabel;
+    /// Identify with awareness of the utterance length, so short (less reliable) utterances
+    /// can use a relaxed matching threshold. The default ignores duration.
+    fn identify_with_duration(&mut self, e: &Embedding, _duration_secs: f32) -> SpeakerLabel {
+        self.identify(e)
+    }
     fn promote(&mut self, cluster: ClusterId, name: &str) -> Result<()>;
 }
 

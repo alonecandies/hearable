@@ -139,7 +139,10 @@ where
                 Err(_) => continue,
             };
             // Brief lock: the UI thread may promote a cluster between utterances.
-            let speaker = identifier.lock().unwrap().identify(&emb);
+            let speaker = identifier
+                .lock()
+                .unwrap()
+                .identify_with_duration(&emb, utt.duration_secs());
             sink.emit(CaptionEvent {
                 utt_id: utt.id,
                 text: tr.text,
