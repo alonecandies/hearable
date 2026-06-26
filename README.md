@@ -61,10 +61,22 @@ cargo run -p hearable -- config
 
 - [x] **Phase 0** — Workspace, trait surface, online speaker clustering/identification,
   profile store, mock pipeline, CI.
-- [~] **Phase 1** (in progress) — threaded coordinator + resampler **done & tested**; Silero
-  VAD + SenseVoice ASR + ERes2NetV2 embeddings **done** (behind the `sherpa` feature,
-  compile+link verified). Remaining: `cpal` mic capture, egui overlay, model downloader, and
-  the `hearable run` command + onboarding.
+- [~] **Phase 1** (vertical slice wired) — threaded coordinator, resampler, model downloader,
+  and the caption-overlay view-model are **built & tested**; Silero VAD, SenseVoice ASR,
+  ERes2NetV2 embeddings, the `cpal` mic source, the egui overlay, and the `hearable run`
+  wiring are **done and compile+link-verified** behind the `live` feature. Remaining
+  refinements: interactive click-to-name, language-ID pass, opt-in streaming mode, and
+  first-run onboarding with automatic model download.
+
+### Running the live build (developer preview)
+
+```bash
+# Downloads sherpa-onnx native libs at build time; needs a mic + display.
+cargo build --release --features live
+# Provide a directory with the model files (SenseVoice model.int8.onnx + tokens.txt,
+# silero_vad.onnx, 3dspeaker_speech_eres2netv2_sv_zh-cn_16k-common.onnx):
+./target/release/hearable run --models /path/to/models
+```
 - [ ] **Phase 2** — Language-ID routing + opt-in word-by-word streaming mode.
 - [ ] **Phase 3** — Wayland (layer-shell) overlay + Homebrew/apt/AppImage packaging.
 - [ ] **Phase 4** — Optional cloud hybrid mode (identity stays local).

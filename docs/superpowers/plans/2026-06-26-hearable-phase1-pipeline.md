@@ -27,9 +27,15 @@
 - [x] **`SherpaEmbeddingExtractor`** (`EmbeddingExtractor`, behind `sherpa`) — ERes2NetV2 embeddings. Compile+link verified.
 - [x] **Feature architecture** — `sherpa`/`mic` flags; default build native-free; binary links with `--features sherpa`.
 
+**Also done since:**
+- [x] **Task 1.1 `MicAudioSource`** (cpal, `mic`) — realtime callback → rtrb → resample; compile-verified.
+- [x] **Task 1.4 caption overlay** (`hearable-ui`, `ui`) — testable `CaptionView` + egui rendering; compile-verified.
+- [x] **Task 1.5 model downloader** (`hearable-store`, `download`) — resumable + SHA-256; tested vs a local server.
+- [x] **Task 1.6 `hearable run` wiring** (`live`) — full chain compile+link-verified end-to-end (onboarding + click-to-name still pending below).
+
 **Remaining tasks (each leaves the default suite green):**
 
-### Task 1.1: `MicAudioSource` (cpal, behind `mic`)
+### Task 1.1: `MicAudioSource` (cpal, behind `mic`) — DONE
 - Create `crates/hearable-audio/src/mic_source.rs`: implement `AudioSource` over `cpal`. Pick the default input device + config; in the realtime callback, push raw samples to an `rtrb` ring buffer (no alloc/lock/log); a drain method downmixes to mono and feeds `Resampler16k`, calling `on_frame` with 16 kHz frames. Register an error callback that sets an atomic "rebuild" flag for device-change/XRUN.
 - Compile-check: `cargo check -p hearable-audio --features mic`. Runtime needs a real mic (manual/local only).
 - Note: cpal 0.18 `Stream` is `Send`; `BufferSize::Fixed`; verify `NSMicrophoneUsageDescription` path on macOS (Task 1.6).
