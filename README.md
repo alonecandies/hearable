@@ -61,8 +61,10 @@ cargo run -p hearable -- config
 
 - [x] **Phase 0** — Workspace, trait surface, online speaker clustering/identification,
   profile store, mock pipeline, CI.
-- [ ] **Phase 1** — Real audio capture (`cpal`) + Silero VAD + multilingual ASR (SenseVoice) +
-  speaker embeddings (ERes2NetV2) + egui overlay + onboarding, on macOS/X11.
+- [~] **Phase 1** (in progress) — threaded coordinator + resampler **done & tested**; Silero
+  VAD + SenseVoice ASR + ERes2NetV2 embeddings **done** (behind the `sherpa` feature,
+  compile+link verified). Remaining: `cpal` mic capture, egui overlay, model downloader, and
+  the `hearable run` command + onboarding.
 - [ ] **Phase 2** — Language-ID routing + opt-in word-by-word streaming mode.
 - [ ] **Phase 3** — Wayland (layer-shell) overlay + Homebrew/apt/AppImage packaging.
 - [ ] **Phase 4** — Optional cloud hybrid mode (identity stays local).
