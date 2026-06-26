@@ -5,9 +5,19 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 
+[features]
+default = []
+# Real microphone capture via cpal (CoreAudio / ALSA / PulseAudio). Off in CI.
+mic = ["dep:cpal"]
+
 [dependencies]
 hearable-core.workspace = true
 hound.workspace = true
+rubato.workspace = true
+rtrb.workspace = true
+audioadapter.workspace = true
+audioadapter-buffers.workspace = true
+cpal = { workspace = true, optional = true }
 
 [dev-dependencies]
 tempfile.workspace = true

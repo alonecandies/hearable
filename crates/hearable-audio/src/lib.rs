@@ -4,8 +4,10 @@
 //! [`EnergySegmenter`]. Phase 1 adds the real `cpal` capture path (with `rtrb` + `rubato`)
 //! and the sherpa-onnx Silero VAD, both behind the same traits.
 
+pub mod resample;
 pub mod segmenter;
 pub mod wav_source;
 
+pub use resample::Resampler16k;
 pub use segmenter::{EnergySegmenter, SegConfig};
 pub use wav_source::WavAudioSource;
