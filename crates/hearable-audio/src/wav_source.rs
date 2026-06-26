@@ -11,8 +11,7 @@ pub struct WavAudioSource {
 
 impl WavAudioSource {
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
-        let mut reader =
-            hound::WavReader::open(path).map_err(|e| Error::Audio(e.to_string()))?;
+        let mut reader = hound::WavReader::open(path).map_err(|e| Error::Audio(e.to_string()))?;
         let spec = reader.spec();
         let samples: Vec<f32> = match spec.sample_format {
             hound::SampleFormat::Float => {

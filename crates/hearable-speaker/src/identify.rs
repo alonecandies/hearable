@@ -250,7 +250,11 @@ mod tests {
         let mut short_id = id_default();
         short_id.identify_with_duration(&a, 0.5);
         let short_label = short_id.identify_with_duration(&b, 0.5);
-        assert_eq!(cluster_of(&short_label).0, 0, "short utterance: joins cluster 0");
+        assert_eq!(
+            cluster_of(&short_label).0,
+            0,
+            "short utterance: joins cluster 0"
+        );
     }
 
     proptest::proptest! {
