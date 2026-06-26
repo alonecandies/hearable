@@ -21,10 +21,9 @@ use std::sync::{Arc, Mutex};
 pub fn run(models: &Path, engine: &str, language: Option<String>) -> Result<()> {
     let settings = Settings::load()?;
 
-    // First run: persist settings (privacy-first defaults) so the choice sticks. An
-    // interactive retention prompt is a planned onboarding refinement.
-    if let Some(dirs) = directories::ProjectDirs::from("app", "krystal", "hearable") {
-        let cfg_path = dirs.config_dir().join("config.toml");
+    // First run: persist settings (privacy-first defaults) to the same path load() reads, so
+    // the choice sticks. An interactive retention prompt is a planned onboarding refinement.
+    if let Some(cfg_path) = Settings::config_path() {
         if !cfg_path.exists() {
             let _ = settings.save_to(&cfg_path);
         }
@@ -43,21 +42,35 @@ pub fn run(models: &Path, engine: &str, language: Option<String>) -> Result<()> 
         None => std::path::PathBuf::from("hearable.db"),
     };
 
+    require(&vad_model)?;
+    require(&embed_model)?;
     let vad = SileroVad::new(&SileroVadConfig::with_model(path_str(&vad_model)?))?;
 
     // Select the ASR engine. Whisper covers Vietnamese and many more languages; SenseVoice is
     // faster but limited to zh/en/ja/ko/yue.
     let asr: Box<dyn AsrEngine> = match engine {
-        "whisper" => Box::new(WhisperEngine::new(
-            &WhisperPaths {
-                encoder: path_str(&models.join("whisper-encoder.onnx"))?.to_string(),
-                decoder: path_str(&models.join("whisper-decoder.onnx"))?.to_string(),
-                tokens: path_str(&models.join("whisper-tokens.txt"))?.to_string(),
-            },
-            language,
-            2,
-        )?),
+        "whisper" => {
+            let (enc, dec, tok) = (
+                models.join("whisper-encoder.onnx"),
+                models.join("whisper-decoder.onnx"),
+                models.join("whisper-tokens.txt"),
+            );
+            require(&enc)?;
+            require(&dec)?;
+            require(&tok)?;
+            Box::new(WhisperEngine::new(
+                &WhisperPaths {
+                    encoder: path_str(&enc)?.to_string(),
+                    decoder: path_str(&dec)?.to_string(),
+                    tokens: path_str(&tok)?.to_string(),
+                },
+                language,
+                2,
+            )?)
+        }
         _ => {
+            require(&sense_model)?;
+            require(&tokens)?;
             let sv = SenseVoiceEngine::new(
                 &SenseVoicePaths {
                     model: path_str(&sense_model)?.to_string(),
@@ -137,4 +150,15 @@ pub fn run(models: &Path, engine: &str, language: Option<String>) -> Result<()> 
 fn path_str(p: &Path) -> Result<&str> {
     p.to_str()
         .ok_or_else(|| Error::Config(format!("non-UTF8 model path: {}", p.display())))
+}
+
+fn require(p: &Path) -> Result<()> {
+    if p.exists() {
+        Ok(())
+    } else {
+        Err(Error::Config(format!(
+            "missing model file: {}\nDownload the models first:  ./scripts/fetch-models.sh <dir>",
+            p.display()
+        )))
+    }
 }

@@ -2,7 +2,7 @@ use crate::{Embedding, Result};
 use figment::providers::{Env, Format, Serialized, Toml};
 use figment::Figment;
 use serde::{Deserialize, Serialize};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// How much of what is heard is kept. Defaults to the privacy-first option.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -42,11 +42,22 @@ impl Default for Settings {
 }
 
 impl Settings {
-    /// Load settings: compiled defaults, overlaid by `config.toml` if present,
-    /// overlaid by `HEARABLE_*` environment variables.
+    /// The platform config file path (e.g. `~/Library/Application Support/.../config.toml` on
+    /// macOS, `$XDG_CONFIG_HOME/hearable/config.toml` on Linux). `None` if there's no home dir.
+    pub fn config_path() -> Option<PathBuf> {
+        directories::ProjectDirs::from("app", "krystal", "hearable")
+            .map(|dirs| dirs.config_dir().join("config.toml"))
+    }
+
+    /// Load settings: compiled defaults, overlaid by the platform `config.toml` if present,
+    /// overlaid by `HEARABLE_*` environment variables. Reads from the same path
+    /// [`Settings::config_path`] writes to, so persisted choices round-trip.
     pub fn load() -> Result<Settings> {
-        Figment::from(Serialized::defaults(Settings::default()))
-            .merge(Toml::file("config.toml"))
+        let mut figment = Figment::from(Serialized::defaults(Settings::default()));
+        if let Some(path) = Self::config_path() {
+            figment = figment.merge(Toml::file(path));
+        }
+        figment
             .merge(Env::prefixed("HEARABLE_"))
             .extract()
             .map_err(|e| crate::Error::Config(e.to_string()))

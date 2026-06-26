@@ -11,3 +11,8 @@ jobs:
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
+      # The `download` feature is pure-Rust (reqwest + sha2), so it builds on the runner.
+      # The sherpa/mic/ui features need native libs (sherpa downloads its own at build time,
+      # cpal needs libasound2-dev, eframe needs X11/Wayland dev libs) and are verified locally.
+      - run: cargo clippy -p hearable-store --features download --all-targets -- -D warnings
+      - run: cargo test -p hearable-store --features download

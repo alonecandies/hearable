@@ -1854,6 +1854,7 @@ dependencies = [
 name = "hearable-core"
 version = "0.1.0"
 dependencies = [
+ "directories",
  "figment",
  "serde",
  "tempfile",

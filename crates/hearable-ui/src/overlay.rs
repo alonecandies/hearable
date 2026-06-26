@@ -80,7 +80,9 @@ impl eframe::App for CaptionOverlay {
             }
         });
 
-        ctx.request_repaint(); // keep polling the channel for new captions
+        // Poll the caption channel ~20x/sec instead of repainting every frame, so an idle
+        // always-on overlay doesn't peg a CPU core.
+        ctx.request_repaint_after(std::time::Duration::from_millis(50));
     }
 }
 

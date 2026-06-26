@@ -10,6 +10,7 @@ thiserror.workspace = true
 serde.workspace = true
 figment.workspace = true
 toml.workspace = true
+directories.workspace = true
 
 [dev-dependencies]
 # Enables `figment::Jail` for hermetic env-override tests (additive over workspace features).
