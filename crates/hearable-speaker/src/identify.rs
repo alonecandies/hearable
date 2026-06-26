@@ -9,8 +9,11 @@ pub struct ClusterConfig {
     pub short_threshold: f32,
     /// Utterances shorter than this (seconds) use `short_threshold`.
     pub short_secs: f32,
-    /// Exponential-moving-average weight when updating a matched centroid.
+    /// Exponential-moving-average weight when updating a matched (unnamed) centroid.
     pub ema_alpha: f32,
+    /// Cap on simultaneously-tracked clusters; when full, the least-recently-seen *unnamed*
+    /// cluster is evicted so an always-on session doesn't grow memory/scan-time without bound.
+    pub max_clusters: usize,
 }
 
 impl Default for ClusterConfig {
@@ -23,6 +26,7 @@ impl Default for ClusterConfig {
             short_threshold: 0.40,
             short_secs: 2.0,
             ema_alpha: 0.05,
+            max_clusters: 64,
         }
     }
 }
@@ -31,6 +35,8 @@ struct Cluster {
     id: ClusterId,
     centroid: Embedding,
     name: Option<String>,
+    /// Monotonic tick of the last utterance assigned here (for LRU eviction of unnamed clusters).
+    last_seen: u64,
 }
 
 /// Online (incremental) speaker identifier: cosine leader clustering with known-profile
@@ -39,6 +45,7 @@ pub struct LeaderClusterIdentifier {
     cfg: ClusterConfig,
     clusters: Vec<Cluster>,
     next_id: u64,
+    tick: u64,
 }
 
 impl LeaderClusterIdentifier {
@@ -49,6 +56,7 @@ impl LeaderClusterIdentifier {
             cfg,
             clusters: Vec::new(),
             next_id: 0,
+            tick: 0,
         };
         for p in profiles {
             if let Some(centroid) = mean(&p.embeddings) {
@@ -57,6 +65,7 @@ impl LeaderClusterIdentifier {
                     id,
                     centroid,
                     name: Some(p.name),
+                    last_seen: 0,
                 });
             }
         }
@@ -69,6 +78,11 @@ impl LeaderClusterIdentifier {
         id
     }
 
+    /// Number of clusters currently tracked (named profiles + active unknown speakers).
+    pub fn cluster_count(&self) -> usize {
+        self.clusters.len()
+    }
+
     /// The current centroid of a cluster, for persisting a promoted profile. `None` if the
     /// cluster id is unknown.
     pub fn centroid_of(&self, cluster: ClusterId) -> Option<Embedding> {
@@ -79,6 +93,9 @@ impl LeaderClusterIdentifier {
     }
 
     fn identify_at(&mut self, e: &Embedding, thr: f32) -> SpeakerLabel {
+        self.tick += 1;
+        let now = self.tick;
+
         let mut best: Option<(usize, f32)> = None;
         for (i, c) in self.clusters.iter().enumerate() {
             let s = c.centroid.cosine(e);
@@ -89,7 +106,12 @@ impl LeaderClusterIdentifier {
         }
         match best {
             Some((i, s)) if s >= thr => {
-                ema_update(&mut self.clusters[i].centroid, e, self.cfg.ema_alpha);
+                self.clusters[i].last_seen = now;
+                // Anchor named/enrolled profiles: only let unnamed clusters drift via EMA, so a
+                // recognized person's centroid doesn't wander toward whoever speaks near them.
+                if self.clusters[i].name.is_none() {
+                    ema_update(&mut self.clusters[i].centroid, e, self.cfg.ema_alpha);
+                }
                 let c = &self.clusters[i];
                 match &c.name {
                     Some(name) => SpeakerLabel::Known {
@@ -102,19 +124,40 @@ impl LeaderClusterIdentifier {
                     },
                 }
             }
-            other => {
-                let score = other.map_or(0.0, |(_, s)| s);
+            _ => {
+                self.evict_if_full();
                 let id = self.alloc_id();
                 self.clusters.push(Cluster {
                     id,
                     centroid: e.clone(),
                     name: None,
+                    last_seen: now,
                 });
+                // A freshly-seeded cluster is, by definition, a perfect match for its own seed.
                 SpeakerLabel::Unknown {
                     cluster_id: id,
-                    score,
+                    score: 1.0,
                 }
             }
+        }
+    }
+
+    /// If at capacity, evict the least-recently-seen *unnamed* cluster (named profiles are
+    /// never evicted). If every cluster is named we simply allow growth (named set is bounded
+    /// by user actions).
+    fn evict_if_full(&mut self) {
+        if self.clusters.len() < self.cfg.max_clusters {
+            return;
+        }
+        if let Some(idx) = self
+            .clusters
+            .iter()
+            .enumerate()
+            .filter(|(_, c)| c.name.is_none())
+            .min_by_key(|(_, c)| c.last_seen)
+            .map(|(i, _)| i)
+        {
+            self.clusters.remove(idx);
         }
     }
 }
@@ -158,15 +201,21 @@ fn ema_update(centroid: &mut Embedding, e: &Embedding, alpha: f32) {
 
 fn mean(es: &[Embedding]) -> Option<Embedding> {
     let dim = es.first()?.0.len();
+    // Only average embeddings of the expected dimension (a corrupt/mixed-dim profile store
+    // would otherwise silently produce a truncated, wrong centroid).
     let mut acc = vec![0.0f32; dim];
-    for e in es {
+    let mut n = 0u32;
+    for e in es.iter().filter(|e| e.0.len() == dim) {
         for (a, x) in acc.iter_mut().zip(&e.0) {
             *a += x;
         }
+        n += 1;
     }
-    let n = es.len() as f32;
+    if n == 0 {
+        return None;
+    }
     for a in &mut acc {
-        *a /= n;
+        *a /= n as f32;
     }
     Some(Embedding(acc))
 }
@@ -247,6 +296,59 @@ mod tests {
     }
 
     #[test]
+    fn cluster_count_is_capped_with_lru_eviction() {
+        let cfg = ClusterConfig {
+            threshold: 0.99,
+            short_threshold: 0.99,
+            short_secs: 0.0,
+            ema_alpha: 0.05,
+            max_clusters: 3,
+        };
+        let mut id = LeaderClusterIdentifier::new(cfg, vec![]);
+        // Four near-orthogonal embeddings, high threshold -> four new-cluster attempts.
+        for v in [
+            vec![1.0, 0.0, 0.0, 0.0],
+            vec![0.0, 1.0, 0.0, 0.0],
+            vec![0.0, 0.0, 1.0, 0.0],
+            vec![0.0, 0.0, 0.0, 1.0],
+        ] {
+            id.identify(&Embedding(v));
+        }
+        assert_eq!(
+            id.cluster_count(),
+            3,
+            "cluster count must be capped at max_clusters"
+        );
+    }
+
+    #[test]
+    fn named_cluster_centroid_is_anchored() {
+        let mut id = id_default();
+        let cid = match id.identify(&Embedding(vec![1.0, 0.0, 0.0])) {
+            SpeakerLabel::Unknown { cluster_id, .. } => cluster_id,
+            _ => unreachable!(),
+        };
+        id.promote(cid, "Mom").unwrap();
+        let before = id.centroid_of(cid).unwrap();
+        // A nearby embedding matches "Mom" but, being named, must not drift her centroid.
+        id.identify(&Embedding(vec![0.9, 0.1, 0.0]));
+        assert_eq!(
+            id.centroid_of(cid).unwrap(),
+            before,
+            "named centroid must stay anchored"
+        );
+    }
+
+    #[test]
+    fn new_cluster_reports_full_self_confidence() {
+        let mut id = id_default();
+        match id.identify(&Embedding(vec![1.0, 0.0, 0.0])) {
+            SpeakerLabel::Unknown { score, .. } => assert_eq!(score, 1.0),
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
     fn centroid_of_returns_first_member_then_none_for_unknown() {
         let mut id = id_default();
         let e = Embedding(vec![1.0, 0.0, 0.0]);
@@ -265,6 +367,7 @@ mod tests {
             short_threshold: 0.62,
             short_secs: 1.5,
             ema_alpha: 0.05,
+            max_clusters: 64,
         };
         let a = Embedding(vec![1.0, 0.0]);
         let b = Embedding(vec![0.66, 0.75]);

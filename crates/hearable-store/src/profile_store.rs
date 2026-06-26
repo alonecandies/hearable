@@ -83,6 +83,11 @@ fn decode(buf: &[u8]) -> Result<Vec<Embedding>> {
         }
         let dim = u32::from_le_bytes(buf[i..i + 4].try_into().unwrap()) as usize;
         i += 4;
+        // Guard against a corrupt header claiming a huge dim before we reserve for it
+        // (overflow-safe: compare against remaining bytes rather than computing dim*4).
+        if dim > (buf.len() - i) / 4 {
+            return Err(Error::Store("embedding length exceeds blob".into()));
+        }
         let mut v = Vec::with_capacity(dim);
         for _ in 0..dim {
             if i + 4 > buf.len() {

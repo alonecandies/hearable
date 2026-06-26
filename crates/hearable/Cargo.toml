@@ -51,5 +51,6 @@ clap.workspace = true
 directories.workspace = true
 
 [dev-dependencies]
+hearable-core = { workspace = true, features = ["testutil"] }
 hound.workspace = true
 tempfile.workspace = true

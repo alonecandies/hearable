@@ -85,10 +85,14 @@ impl DropOldestQueue {
 }
 
 /// Result of a pipeline run.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PipelineOutcome {
     /// Utterances discarded by the drop-oldest policy under overload.
     pub dropped: u64,
+    /// Utterances whose ASR or embedding step errored (skipped, not captioned).
+    pub inference_errors: u64,
+    /// A fatal capture error (e.g. the mic device was lost), if the run ended on one.
+    pub capture_error: Option<String>,
 }
 
 /// Run the realtime pipeline across two threads, blocking until the audio source is
@@ -113,10 +117,20 @@ where
 {
     let queue = Arc::new(DropOldestQueue::new(capacity));
 
+    // Closes the queue when dropped, so the consumer always wakes — even if the producer body
+    // panics mid-run (otherwise the consumer would block on recv() forever).
+    struct CloseGuard<'a>(&'a DropOldestQueue);
+    impl Drop for CloseGuard<'_> {
+        fn drop(&mut self) {
+            self.0.close();
+        }
+    }
+
     let prod_q = Arc::clone(&queue);
-    let producer = thread::spawn(move || {
+    let producer = thread::spawn(move || -> Option<String> {
         let q = &prod_q;
-        let _ = source.start(&mut |frame| {
+        let _guard = CloseGuard(q);
+        let result = source.start(&mut |frame| {
             for utt in segmenter.push(frame) {
                 q.push(utt);
             }
@@ -124,24 +138,39 @@ where
         for utt in segmenter.flush() {
             q.push(utt);
         }
-        q.close();
+        result.err().map(|e| e.to_string())
     });
 
     let cons_q = Arc::clone(&queue);
-    let consumer = thread::spawn(move || {
+    let consumer = thread::spawn(move || -> u64 {
+        let mut inference_errors = 0u64;
         while let Some(utt) = cons_q.recv() {
             let tr = match asr.transcribe(&utt) {
                 Ok(t) => t,
-                Err(_) => continue,
+                Err(e) => {
+                    eprintln!("[hearable] ASR error: {e}");
+                    inference_errors += 1;
+                    continue;
+                }
             };
+            // Skip silence/noise the VAD let through that produced no words — emitting it would
+            // show a blank caption row and seed a junk speaker cluster.
+            if tr.text.trim().is_empty() {
+                continue;
+            }
             let emb = match embedder.embed(&utt) {
                 Ok(e) => e,
-                Err(_) => continue,
+                Err(e) => {
+                    eprintln!("[hearable] embedding error: {e}");
+                    inference_errors += 1;
+                    continue;
+                }
             };
-            // Brief lock: the UI thread may promote a cluster between utterances.
+            // Brief lock: the UI thread may promote a cluster between utterances. Recover from a
+            // poisoned mutex rather than cascading the panic.
             let speaker = identifier
                 .lock()
-                .unwrap()
+                .unwrap_or_else(|p| p.into_inner())
                 .identify_with_duration(&emb, utt.duration_secs());
             sink.emit(CaptionEvent {
                 utt_id: utt.id,
@@ -153,12 +182,25 @@ where
                 is_final: tr.is_final,
             });
         }
+        inference_errors
     });
 
-    producer.join().expect("capture/VAD thread panicked");
-    consumer.join().expect("inference thread panicked");
+    // Join both without re-panicking, so a panic in one thread can't strand the other.
+    let capture_error = match producer.join() {
+        Ok(err) => err,
+        Err(_) => Some("capture/VAD thread panicked".to_string()),
+    };
+    let inference_errors = match consumer.join() {
+        Ok(n) => n,
+        Err(_) => {
+            eprintln!("[hearable] inference thread panicked");
+            0
+        }
+    };
     PipelineOutcome {
         dropped: queue.dropped(),
+        inference_errors,
+        capture_error,
     }
 }
 

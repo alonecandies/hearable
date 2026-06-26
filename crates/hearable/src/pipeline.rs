@@ -28,6 +28,9 @@ where
 
     for utt in utts {
         let tr = asr.transcribe(&utt)?;
+        if tr.text.trim().is_empty() {
+            continue;
+        }
         let emb = embedder.embed(&utt)?;
         let speaker = identifier.identify_with_duration(&emb, utt.duration_secs());
         sink.emit(CaptionEvent {

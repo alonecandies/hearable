@@ -6,6 +6,7 @@
 
 pub mod config;
 pub mod error;
+#[cfg(any(test, feature = "testutil"))]
 pub mod testutil;
 pub mod traits;
 pub mod types;

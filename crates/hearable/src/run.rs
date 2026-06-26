@@ -25,7 +25,12 @@ pub fn run(models: &Path, engine: &str, language: Option<String>) -> Result<()> 
     // the choice sticks. An interactive retention prompt is a planned onboarding refinement.
     if let Some(cfg_path) = Settings::config_path() {
         if !cfg_path.exists() {
-            let _ = settings.save_to(&cfg_path);
+            if let Err(e) = settings.save_to(&cfg_path) {
+                eprintln!(
+                    "[hearable] could not persist settings to {}: {e}",
+                    cfg_path.display()
+                );
+            }
         }
     }
 
@@ -115,7 +120,16 @@ pub fn run(models: &Path, engine: &str, language: Option<String>) -> Result<()> 
     // Pipeline on a worker thread (blocks on the always-on mic stream).
     let pipeline_id = Arc::clone(&identifier);
     let worker = std::thread::spawn(move || {
-        let _ = run_threaded(mic, vad, asr, embed, pipeline_id, sink, 4);
+        let outcome = run_threaded(mic, vad, asr, embed, pipeline_id, sink, 4);
+        if let Some(err) = outcome.capture_error {
+            eprintln!("[hearable] audio capture stopped: {err}");
+        }
+        if outcome.inference_errors > 0 {
+            eprintln!(
+                "[hearable] {} utterance(s) skipped due to inference errors",
+                outcome.inference_errors
+            );
+        }
     });
 
     // Command handler: name a speaker -> promote in the identifier -> persist the profile.
@@ -124,14 +138,16 @@ pub fn run(models: &Path, engine: &str, language: Option<String>) -> Result<()> 
         for cmd in cmd_rx {
             let UiCommand::NameSpeaker { cluster_id, name } = cmd;
             let centroid = {
-                let mut id = handler_id.lock().unwrap();
+                let mut id = handler_id.lock().unwrap_or_else(|p| p.into_inner());
                 if id.promote(cluster_id, &name).is_err() {
                     continue;
                 }
                 id.centroid_of(cluster_id)
             };
             if let Some(c) = centroid {
-                let _ = store.upsert_profile(&name, &[c]);
+                if let Err(e) = store.upsert_profile(&name, &[c]) {
+                    eprintln!("[hearable] failed to save speaker profile '{name}': {e}");
+                }
             }
         }
     });
@@ -141,8 +157,12 @@ pub fn run(models: &Path, engine: &str, language: Option<String>) -> Result<()> 
 
     // Window closed -> stop capture; dropping cmd_tx ends the handler.
     stop.store(true, Ordering::Relaxed);
-    let _ = worker.join();
-    let _ = handler.join();
+    if worker.join().is_err() {
+        eprintln!("[hearable] pipeline thread panicked");
+    }
+    if handler.join().is_err() {
+        eprintln!("[hearable] speaker-naming thread panicked");
+    }
     overlay_result.map_err(|e| Error::Audio(format!("overlay: {e}")))?;
     Ok(())
 }

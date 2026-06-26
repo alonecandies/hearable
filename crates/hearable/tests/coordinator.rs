@@ -146,3 +146,37 @@ fn threaded_pipeline_conserves_utterances_under_overload() {
     );
     assert!(emitted >= 1, "at least one utterance should be processed");
 }
+
+#[test]
+fn threaded_pipeline_skips_empty_transcripts() {
+    // Two utterances; only id 0 maps to text. The empty (id 1) must be skipped — no blank
+    // caption row, and no junk speaker cluster created for it.
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("two.wav");
+    write_multi_span_wav(&path, 2);
+
+    let source = WavAudioSource::open(&path).unwrap();
+    let seg = EnergySegmenter::new(SegConfig::default());
+    let asr = MockAsrEngine::new(HashMap::from([(0u64, "hello")])); // id 1 -> empty
+    let embed = MockEmbed {
+        map: HashMap::from([
+            (0u64, Embedding(vec![1.0, 0.0, 0.0])),
+            (1u64, Embedding(vec![0.0, 1.0, 0.0])),
+        ]),
+    };
+    let id = Arc::new(Mutex::new(LeaderClusterIdentifier::new(
+        ClusterConfig::default(),
+        vec![],
+    )));
+    let sink = SharedCaptionSink::new();
+
+    run_threaded(source, seg, asr, embed, id, sink.clone(), 8);
+
+    let evs = sink.snapshot();
+    assert_eq!(
+        evs.len(),
+        1,
+        "the empty-transcript utterance must be skipped"
+    );
+    assert_eq!(evs[0].text, "hello");
+}

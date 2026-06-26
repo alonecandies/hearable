@@ -23,7 +23,10 @@ pub struct Resampler16k {
 impl Resampler16k {
     /// Build a resampler from `input_rate` Hz mono to 16 kHz mono.
     pub fn new(input_rate: u32) -> Result<Self> {
-        if input_rate as usize == TARGET_RATE || input_rate == 0 {
+        if input_rate == 0 {
+            return Err(Error::Audio("resampler: input sample rate is 0".into()));
+        }
+        if input_rate as usize == TARGET_RATE {
             return Ok(Self {
                 inner: None,
                 chunk: 0,
