@@ -16,6 +16,6 @@ pub use traits::{
     AsrEngine, AudioSource, CaptionSink, EmbeddingExtractor, Identifier, ProfileStore, VadSegmenter,
 };
 pub use types::{
-    AsrCaps, CaptionEvent, ClusterId, Embedding, SpeakerLabel, TranscriptResult, Utterance,
-    UtteranceId,
+    AsrCaps, CaptionEvent, ClusterId, Embedding, SpeakerLabel, TranscriptResult, UiCommand,
+    Utterance, UtteranceId,
 };

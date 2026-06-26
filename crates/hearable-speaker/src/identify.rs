@@ -76,6 +76,15 @@ impl LeaderClusterIdentifier {
         id
     }
 
+    /// The current centroid of a cluster, for persisting a promoted profile. `None` if the
+    /// cluster id is unknown.
+    pub fn centroid_of(&self, cluster: ClusterId) -> Option<Embedding> {
+        self.clusters
+            .iter()
+            .find(|c| c.id == cluster)
+            .map(|c| c.centroid.clone())
+    }
+
     fn identify_at(&mut self, e: &Embedding, thr: f32) -> SpeakerLabel {
         let mut best: Option<(usize, f32)> = None;
         for (i, c) in self.clusters.iter().enumerate() {
@@ -233,6 +242,15 @@ mod tests {
     fn promote_unknown_cluster_errors() {
         let mut id = id_default();
         assert!(id.promote(ClusterId(999), "Nobody").is_err());
+    }
+
+    #[test]
+    fn centroid_of_returns_first_member_then_none_for_unknown() {
+        let mut id = id_default();
+        let e = Embedding(vec![1.0, 0.0, 0.0]);
+        id.identify(&e);
+        assert_eq!(id.centroid_of(ClusterId(0)), Some(e));
+        assert_eq!(id.centroid_of(ClusterId(42)), None);
     }
 
     #[test]

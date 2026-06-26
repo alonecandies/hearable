@@ -69,6 +69,13 @@ pub enum SpeakerLabel {
     Unknown { cluster_id: ClusterId, score: f32 },
 }
 
+/// A command issued by the UI to the running pipeline.
+#[derive(Debug, Clone, PartialEq)]
+pub enum UiCommand {
+    /// Promote an anonymous cluster to a named, persisted speaker profile.
+    NameSpeaker { cluster_id: ClusterId, name: String },
+}
+
 /// A caption ready for display: text plus speaker attribution and timing.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CaptionEvent {

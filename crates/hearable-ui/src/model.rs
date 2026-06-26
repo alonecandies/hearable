@@ -24,6 +24,8 @@ pub struct DisplayLine {
     pub text: String,
     pub color: [u8; 3],
     pub is_partial: bool,
+    /// `Some(id)` for an as-yet-unnamed cluster (offer a "name" affordance); `None` if known.
+    pub cluster_id: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -75,11 +77,16 @@ impl CaptionView {
     pub fn push(&mut self, ev: &CaptionEvent) {
         let (key, speaker) = Self::key(&ev.speaker);
         let color = SPEAKER_PALETTE[self.color_index(&key)];
+        let cluster_id = match &ev.speaker {
+            SpeakerLabel::Unknown { cluster_id, .. } => Some(cluster_id.0),
+            SpeakerLabel::Known { .. } => None,
+        };
         let line = DisplayLine {
             speaker,
             text: ev.text.clone(),
             color,
             is_partial: !ev.is_final,
+            cluster_id,
         };
         if ev.is_final {
             self.partial = None;
@@ -151,6 +158,23 @@ mod tests {
         let mut v = CaptionView::new(3);
         v.push(&ev("hi", unknown(0), true));
         assert_eq!(v.visible()[0].speaker, "Speaker 1");
+    }
+
+    #[test]
+    fn unknown_lines_carry_cluster_id_known_do_not() {
+        let mut v = CaptionView::new(3);
+        v.push(&ev("a", unknown(2), true));
+        v.push(&ev(
+            "b",
+            SpeakerLabel::Known {
+                name: "Mom".into(),
+                score: 0.9,
+            },
+            true,
+        ));
+        let lines = v.visible();
+        assert_eq!(lines[0].cluster_id, Some(2));
+        assert_eq!(lines[1].cluster_id, None);
     }
 
     #[test]

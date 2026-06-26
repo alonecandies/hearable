@@ -12,6 +12,7 @@ use hearable_core::{
 use hearable_speaker::{ClusterConfig, LeaderClusterIdentifier};
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::{Arc, Mutex};
 
 struct MockEmbed {
     map: HashMap<u64, Embedding>,
@@ -88,7 +89,10 @@ fn threaded_pipeline_happy_path_two_speakers() {
             (1u64, Embedding(vec![0.0, 1.0, 0.0])),
         ]),
     };
-    let id = LeaderClusterIdentifier::new(ClusterConfig::default(), vec![]);
+    let id = Arc::new(Mutex::new(LeaderClusterIdentifier::new(
+        ClusterConfig::default(),
+        vec![],
+    )));
     let sink = SharedCaptionSink::new();
 
     let outcome = run_threaded(source, seg, asr, embed, id, sink.clone(), 8);
@@ -125,7 +129,10 @@ fn threaded_pipeline_conserves_utterances_under_overload() {
     let embed = MockEmbed {
         map: HashMap::new(),
     };
-    let id = LeaderClusterIdentifier::new(ClusterConfig::default(), vec![]);
+    let id = Arc::new(Mutex::new(LeaderClusterIdentifier::new(
+        ClusterConfig::default(),
+        vec![],
+    )));
     let sink = SharedCaptionSink::new();
 
     let outcome = run_threaded(source, seg, asr, embed, id, sink.clone(), 4);

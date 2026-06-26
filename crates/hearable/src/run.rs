@@ -2,19 +2,19 @@
 //!
 //! Builds the real engines, loads saved speaker profiles, runs the threaded coordinator on a
 //! worker thread, and drives the egui overlay on the main thread (required by the OS window
-//! system). Interactive speaker naming (clicking a "Speaker N" tag) needs the identifier
-//! shared behind a mutex with a UI callback channel — a noted follow-up; this wires the
-//! capture → caption → overlay display path.
+//! system). A command-handler thread applies the overlay's "name this speaker" actions to the
+//! shared identifier and persists the resulting profile.
 
 use hearable::run_threaded;
 use hearable_asr::{SenseVoiceEngine, SenseVoicePaths};
 use hearable_audio::{MicAudioSource, SileroVad, SileroVadConfig};
-use hearable_core::{Error, ProfileStore, Result, Settings};
+use hearable_core::{Error, Identifier, ProfileStore, Result, Settings, UiCommand};
 use hearable_speaker::{ClusterConfig, LeaderClusterIdentifier, SherpaEmbeddingExtractor};
 use hearable_store::SqliteProfileStore;
 use hearable_ui::{run_overlay, ChannelCaptionSink};
 use std::path::Path;
 use std::sync::atomic::Ordering;
+use std::sync::{Arc, Mutex};
 
 pub fn run(models: &Path) -> Result<()> {
     let _settings = Settings::load()?;
@@ -44,24 +44,50 @@ pub fn run(models: &Path) -> Result<()> {
 
     let store = SqliteProfileStore::open(&db_path)?;
     let profiles = store.load_profiles()?;
-    let identifier = LeaderClusterIdentifier::new(ClusterConfig::default(), profiles);
+    let identifier = Arc::new(Mutex::new(LeaderClusterIdentifier::new(
+        ClusterConfig::default(),
+        profiles,
+    )));
 
-    let (tx, rx) = std::sync::mpsc::channel();
-    let sink = ChannelCaptionSink::new(tx);
+    // Caption channel: pipeline sink -> overlay. Command channel: overlay -> handler.
+    let (caption_tx, caption_rx) = std::sync::mpsc::channel();
+    let (cmd_tx, cmd_rx) = std::sync::mpsc::channel::<UiCommand>();
+    let sink = ChannelCaptionSink::new(caption_tx);
 
     let mic = MicAudioSource::new();
     let stop = mic.stop_handle();
 
     // Pipeline on a worker thread (blocks on the always-on mic stream).
+    let pipeline_id = Arc::clone(&identifier);
     let worker = std::thread::spawn(move || {
-        let _ = run_threaded(mic, vad, asr, embed, identifier, sink, 4);
+        let _ = run_threaded(mic, vad, asr, embed, pipeline_id, sink, 4);
+    });
+
+    // Command handler: name a speaker -> promote in the identifier -> persist the profile.
+    let handler_id = Arc::clone(&identifier);
+    let handler = std::thread::spawn(move || {
+        for cmd in cmd_rx {
+            let UiCommand::NameSpeaker { cluster_id, name } = cmd;
+            let centroid = {
+                let mut id = handler_id.lock().unwrap();
+                if id.promote(cluster_id, &name).is_err() {
+                    continue;
+                }
+                id.centroid_of(cluster_id)
+            };
+            if let Some(c) = centroid {
+                let _ = store.upsert_profile(&name, &[c]);
+            }
+        }
     });
 
     // Overlay on the main thread; blocks until the window is closed.
-    let overlay_result = run_overlay(rx, 3);
+    let overlay_result = run_overlay(caption_rx, cmd_tx, 3);
 
+    // Window closed -> stop capture; dropping cmd_tx ends the handler.
     stop.store(true, Ordering::Relaxed);
     let _ = worker.join();
+    let _ = handler.join();
     overlay_result.map_err(|e| Error::Audio(format!("overlay: {e}")))?;
     Ok(())
 }

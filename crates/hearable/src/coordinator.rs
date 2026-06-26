@@ -16,6 +16,10 @@ use std::collections::VecDeque;
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread;
 
+/// Shared, mutable identifier: the inference thread reads it every utterance while the UI
+/// thread may promote a cluster to a named profile concurrently.
+pub type SharedIdentifier<I> = Arc<Mutex<I>>;
+
 struct QueueInner {
     q: VecDeque<Utterance>,
     closed: bool,
@@ -95,7 +99,7 @@ pub fn run_threaded<A, V, G, E, I, S>(
     mut segmenter: V,
     mut asr: G,
     mut embedder: E,
-    mut identifier: I,
+    identifier: SharedIdentifier<I>,
     mut sink: S,
     capacity: usize,
 ) -> PipelineOutcome
@@ -134,7 +138,8 @@ where
                 Ok(e) => e,
                 Err(_) => continue,
             };
-            let speaker = identifier.identify(&emb);
+            // Brief lock: the UI thread may promote a cluster between utterances.
+            let speaker = identifier.lock().unwrap().identify(&emb);
             sink.emit(CaptionEvent {
                 utt_id: utt.id,
                 text: tr.text,
