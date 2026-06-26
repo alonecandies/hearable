@@ -26,6 +26,17 @@ pub trait AsrEngine: Send {
     fn transcribe(&mut self, utt: &Utterance) -> Result<TranscriptResult>;
 }
 
+/// Lets callers select an engine at runtime (`Box<dyn AsrEngine>`) and still satisfy the
+/// generic `AsrEngine` bound used by the pipeline.
+impl AsrEngine for Box<dyn AsrEngine> {
+    fn capabilities(&self) -> AsrCaps {
+        (**self).capabilities()
+    }
+    fn transcribe(&mut self, utt: &Utterance) -> Result<TranscriptResult> {
+        (**self).transcribe(utt)
+    }
+}
+
 /// Extracts a speaker embedding from an utterance.
 pub trait EmbeddingExtractor: Send {
     fn embed(&mut self, utt: &Utterance) -> Result<Embedding>;

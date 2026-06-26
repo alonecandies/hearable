@@ -22,5 +22,11 @@ pub enum Command {
         /// Directory containing the model files (SenseVoice, Silero VAD, ERes2NetV2, tokens).
         #[arg(long)]
         models: PathBuf,
+        /// ASR engine: "sensevoice" (zh/en/ja/ko/yue) or "whisper" (broad multilingual incl. Vietnamese).
+        #[arg(long, default_value = "sensevoice")]
+        engine: String,
+        /// Force a language code (e.g. "vi"); default = auto-detect.
+        #[arg(long)]
+        language: Option<String>,
     },
 }

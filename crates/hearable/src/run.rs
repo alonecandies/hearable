@@ -6,9 +6,11 @@
 //! shared identifier and persists the resulting profile.
 
 use hearable::run_threaded;
-use hearable_asr::{LanguageId, LanguageIdPaths, SenseVoiceEngine, SenseVoicePaths};
+use hearable_asr::{
+    LanguageId, LanguageIdPaths, SenseVoiceEngine, SenseVoicePaths, WhisperEngine, WhisperPaths,
+};
 use hearable_audio::{MicAudioSource, SileroVad, SileroVadConfig};
-use hearable_core::{Error, Identifier, ProfileStore, Result, Settings, UiCommand};
+use hearable_core::{AsrEngine, Error, Identifier, ProfileStore, Result, Settings, UiCommand};
 use hearable_speaker::{ClusterConfig, LeaderClusterIdentifier, SherpaEmbeddingExtractor};
 use hearable_store::SqliteProfileStore;
 use hearable_ui::{run_overlay, ChannelCaptionSink};
@@ -16,7 +18,7 @@ use std::path::Path;
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 
-pub fn run(models: &Path) -> Result<()> {
+pub fn run(models: &Path, engine: &str, language: Option<String>) -> Result<()> {
     let settings = Settings::load()?;
 
     // First run: persist settings (privacy-first defaults) so the choice sticks. An
@@ -42,27 +44,43 @@ pub fn run(models: &Path) -> Result<()> {
     };
 
     let vad = SileroVad::new(&SileroVadConfig::with_model(path_str(&vad_model)?))?;
-    let asr = SenseVoiceEngine::new(
-        &SenseVoicePaths {
-            model: path_str(&sense_model)?.to_string(),
-            tokens: path_str(&tokens)?.to_string(),
-        },
-        2,
-    )?;
-    // Attach the language-ID pass only if the Whisper LID models are present.
-    let lid_encoder = models.join("whisper-encoder.onnx");
-    let lid_decoder = models.join("whisper-decoder.onnx");
-    let asr = if lid_encoder.exists() && lid_decoder.exists() {
-        let lid = LanguageId::new(
-            &LanguageIdPaths {
-                encoder: path_str(&lid_encoder)?.to_string(),
-                decoder: path_str(&lid_decoder)?.to_string(),
+
+    // Select the ASR engine. Whisper covers Vietnamese and many more languages; SenseVoice is
+    // faster but limited to zh/en/ja/ko/yue.
+    let asr: Box<dyn AsrEngine> = match engine {
+        "whisper" => Box::new(WhisperEngine::new(
+            &WhisperPaths {
+                encoder: path_str(&models.join("whisper-encoder.onnx"))?.to_string(),
+                decoder: path_str(&models.join("whisper-decoder.onnx"))?.to_string(),
+                tokens: path_str(&models.join("whisper-tokens.txt"))?.to_string(),
             },
-            1,
-        )?;
-        asr.with_language_id(lid)
-    } else {
-        asr
+            language,
+            2,
+        )?),
+        _ => {
+            let sv = SenseVoiceEngine::new(
+                &SenseVoicePaths {
+                    model: path_str(&sense_model)?.to_string(),
+                    tokens: path_str(&tokens)?.to_string(),
+                },
+                2,
+            )?;
+            // Attach the language-ID pass only if the Whisper LID models are present.
+            let lid_encoder = models.join("whisper-encoder.onnx");
+            let lid_decoder = models.join("whisper-decoder.onnx");
+            if lid_encoder.exists() && lid_decoder.exists() {
+                let lid = LanguageId::new(
+                    &LanguageIdPaths {
+                        encoder: path_str(&lid_encoder)?.to_string(),
+                        decoder: path_str(&lid_decoder)?.to_string(),
+                    },
+                    1,
+                )?;
+                Box::new(sv.with_language_id(lid))
+            } else {
+                Box::new(sv)
+            }
+        }
     };
     let embed = SherpaEmbeddingExtractor::new(path_str(&embed_model)?, 1)?;
 

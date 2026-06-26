@@ -14,18 +14,26 @@ fn main() -> hearable_core::Result<()> {
             let settings = Settings::load()?;
             println!("{settings:?}");
         }
-        Some(Command::Run { models }) => run_command(&models)?,
+        Some(Command::Run {
+            models,
+            engine,
+            language,
+        }) => run_command(&models, &engine, language)?,
     }
     Ok(())
 }
 
 #[cfg(all(feature = "sherpa", feature = "mic", feature = "ui"))]
-fn run_command(models: &Path) -> hearable_core::Result<()> {
-    run::run(models)
+fn run_command(models: &Path, engine: &str, language: Option<String>) -> hearable_core::Result<()> {
+    run::run(models, engine, language)
 }
 
 #[cfg(not(all(feature = "sherpa", feature = "mic", feature = "ui")))]
-fn run_command(_models: &Path) -> hearable_core::Result<()> {
+fn run_command(
+    _models: &Path,
+    _engine: &str,
+    _language: Option<String>,
+) -> hearable_core::Result<()> {
     eprintln!(
         "This build was compiled without the live features. \
          Rebuild with:\n    cargo build --release --features live"
