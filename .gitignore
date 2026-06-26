@@ -2,3 +2,8 @@
 **/*.rs.bk
 .DS_Store
 *.profraw
+# ML model files are downloaded at runtime, never committed (GitHub 100 MB limit).
+/models/
+*.onnx
+*.tar.bz2
+*.part
