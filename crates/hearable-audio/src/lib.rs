@@ -16,3 +16,8 @@ pub use wav_source::WavAudioSource;
 pub mod silero_vad;
 #[cfg(feature = "sherpa")]
 pub use silero_vad::{SileroVad, SileroVadConfig};
+
+#[cfg(feature = "mic")]
+pub mod mic_source;
+#[cfg(feature = "mic")]
+pub use mic_source::MicAudioSource;
