@@ -23,8 +23,11 @@ impl Default for ClusterConfig {
         // 0.5 matches sherpa's own example threshold; short utterances relax further.
         Self {
             threshold: 0.50,
-            short_threshold: 0.40,
-            short_secs: 2.0,
+            // Real-run tuning: short single words give noisy embeddings that falsely split one
+            // speaker into several. Relax the short-utterance threshold and treat more
+            // utterances as "short" so they prefer joining an existing cluster.
+            short_threshold: 0.35,
+            short_secs: 3.0,
             ema_alpha: 0.05,
             max_clusters: 64,
         }
