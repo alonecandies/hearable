@@ -1813,7 +1813,7 @@ dependencies = [
 
 [[package]]
 name = "hearable"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "clap",
  "directories",
@@ -1829,7 +1829,7 @@ dependencies = [
 
 [[package]]
 name = "hearable-asr"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "hearable-core",
  "sherpa-onnx",
@@ -1837,7 +1837,7 @@ dependencies = [
 
 [[package]]
 name = "hearable-audio"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "audioadapter",
  "audioadapter-buffers",
@@ -1852,7 +1852,7 @@ dependencies = [
 
 [[package]]
 name = "hearable-core"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "figment",
  "serde",
@@ -1863,7 +1863,7 @@ dependencies = [
 
 [[package]]
 name = "hearable-speaker"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "hearable-core",
  "proptest",
@@ -1872,7 +1872,7 @@ dependencies = [
 
 [[package]]
 name = "hearable-store"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "hearable-core",
  "reqwest",
@@ -1882,7 +1882,7 @@ dependencies = [
 
 [[package]]
 name = "hearable-ui"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "eframe",
  "egui",

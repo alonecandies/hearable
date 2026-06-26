@@ -61,12 +61,14 @@ cargo run -p hearable -- config
 
 - [x] **Phase 0** — Workspace, trait surface, online speaker clustering/identification,
   profile store, mock pipeline, CI.
-- [~] **Phase 1** (vertical slice wired) — threaded coordinator, resampler, model downloader,
-  and the caption-overlay view-model are **built & tested**; Silero VAD, SenseVoice ASR,
-  ERes2NetV2 embeddings, the `cpal` mic source, the egui overlay, and the `hearable run`
-  wiring are **done and compile+link-verified** behind the `live` feature. Remaining
-  refinements: interactive click-to-name, language-ID pass, opt-in streaming mode, and
-  first-run onboarding with automatic model download.
+- [x] **Phase 1** — full pipeline wired: mic capture, Silero VAD, SenseVoice **and Whisper**
+  ASR (Whisper covers Vietnamese), language-ID, ERes2NetV2 speaker embeddings, online
+  clustering, **interactive click-to-name that persists**, and the egui overlay — all
+  compile+link-verified behind the `live` feature; logic covered by 39 native-free tests.
+  Choose the engine at runtime: `hearable run --engine whisper --language vi`.
+- [~] **Phase 3** (in progress) — macOS `.app` bundle, `cargo-deb` metadata, and a Homebrew
+  formula are scaffolded; Wayland layer-shell overlay and the `.deb`/AppImage builds need a
+  Linux host (see the Phase 3 plan).
 
 ### Running the live build (developer preview)
 
