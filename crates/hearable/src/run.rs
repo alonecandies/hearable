@@ -6,7 +6,7 @@
 //! shared identifier and persists the resulting profile.
 
 use hearable::run_threaded;
-use hearable_asr::{SenseVoiceEngine, SenseVoicePaths};
+use hearable_asr::{LanguageId, LanguageIdPaths, SenseVoiceEngine, SenseVoicePaths};
 use hearable_audio::{MicAudioSource, SileroVad, SileroVadConfig};
 use hearable_core::{Error, Identifier, ProfileStore, Result, Settings, UiCommand};
 use hearable_speaker::{ClusterConfig, LeaderClusterIdentifier, SherpaEmbeddingExtractor};
@@ -40,6 +40,21 @@ pub fn run(models: &Path) -> Result<()> {
         },
         2,
     )?;
+    // Attach the language-ID pass only if the Whisper LID models are present.
+    let lid_encoder = models.join("whisper-encoder.onnx");
+    let lid_decoder = models.join("whisper-decoder.onnx");
+    let asr = if lid_encoder.exists() && lid_decoder.exists() {
+        let lid = LanguageId::new(
+            &LanguageIdPaths {
+                encoder: path_str(&lid_encoder)?.to_string(),
+                decoder: path_str(&lid_decoder)?.to_string(),
+            },
+            1,
+        )?;
+        asr.with_language_id(lid)
+    } else {
+        asr
+    };
     let embed = SherpaEmbeddingExtractor::new(path_str(&embed_model)?, 1)?;
 
     let store = SqliteProfileStore::open(&db_path)?;
