@@ -12,7 +12,7 @@ class Hearable < Formula
 
   stable do
     url "https://github.com/alonecandies/hearable/archive/refs/tags/v0.1.0.tar.gz"
-    sha256 "9ee2df320e5550e94ea28dea665fd858d6f1aa2bcdbf56d1486783d3a7645885"
+    sha256 "04bbfb609d78a7b8b20e6a75a1ce3d0285f23258904e92e12d9f6da7bb93282b"
   end
 
   depends_on "rust" => :build
